@@ -139,7 +139,10 @@ public:
 		case CharacterType::Archer: damage_init = 12; hp_init = 18; defence_init = 10; break;
 		}
 		characters.push_back(std::make_unique<Character>(
-			std::move(name), age, damage_init, hp_init, defence_init,lv,live,character_type,exp, damage_init, hp_init, defence_init));
+			std::move(name), age, damage_init, hp_init, defence_init, lv, live,
+			character_type, std::vector<std::shared_ptr<Skill>>{},
+			exp, 51, // next_exp = lv² + 50 = 51
+			damage_init, hp_init, defence_init));
 		return characters.back().get();
 	}
 	const std::vector<std::unique_ptr<Character>>& all() const noexcept { return characters; }
@@ -148,6 +151,7 @@ public:
 		for (int i = 0; i<characters.size(); i++) {
 			if (characters[i]->get_name() == name) { return characters[i].get(); }
 		}
+		return nullptr;
 	}
 	
 };
@@ -155,7 +159,7 @@ public:
 class Monster_Manager {
 	std::vector<std::unique_ptr<Monster>> monsters;
 public:
-	Monster* make_monster(const std::string& name, int age,int damage_init,int hp_init,int defence_init,int lv,MonsterType monster_type, int exp_pd) {
+	Monster* make_monster(std::string& name, int age,int damage_init,int hp_init,int defence_init,int lv,MonsterType monster_type, int exp_pd) {
 		bool live = true;
 		monsters.push_back(std::make_unique<Monster>(std::move(name), age, damage_init, hp_init, defence_init, lv,live,monster_type,exp_pd));
 		return monsters.back().get();
@@ -168,6 +172,7 @@ public:
 				return monsters[i].get();
 			}
 		}
+		return nullptr;
 	}
 
 	std::string to_string(MonsterType type) {
@@ -176,6 +181,7 @@ public:
 		case MonsterType::Humanoid: return "Humanoid";
 		case MonsterType::Animal:   return "Animal";
 		case MonsterType::Dragon:   return "Dragon";
+		default: return "Unknown";
 		}
 	}
 
@@ -187,10 +193,10 @@ public:
 		"Poisonous", "Quick", "Ruthless", "Savage", "Terrifying" };
 
 		int typenum = random(1, 100);
-		if (typenum > 41) { typenum = 1; }
-		else if (typenum > 61) { typenum = 2; }
-		else if (typenum > 91) { typenum = 3; }
-		else { typenum = 4; }
+		if (typenum <= 40) { typenum = 1; }        // 1~40 → Undead (40%)
+		else if (typenum <= 70) { typenum = 2; }   // 41~70 → Humanoid (30%) 
+		else if (typenum <= 90) { typenum = 3; }   // 71~90 → Animal (20%)
+		else { typenum = 4; }                       // 91~100 → Dragon (10%)
 		int exp_pd = pow(map_block_count(lv, x_max, y_max), 1.2) + 50*typenum;//몬스터가 제공하는 경험치 (해당 레벨의 블록수^1.2+50*타입넘버)
 		MonsterType monster_type = static_cast<MonsterType>(typenum);
 		int damage_init, hp_init, defence_init;
@@ -402,9 +408,11 @@ public:
 		while (character->get_exp() >= character->get_next_exp()) {
 			character->set_lv(character->get_lv() + 1);
 			next_exp_next(character);
+
+			character->set_damage_init((pow(character->get_lv(), 1.1) + 1) * character->get_first_damage_init());
+			character->set_hp_init((pow(character->get_lv(), 1.35) + 1) * character->get_first_hp_init());
+			character->set_defence_init((pow(character->get_lv(), 0.6) + 1) * character->get_first_defence_init());
 		}
-		character->set_damage_init((pow(character->get_lv(), 1.1) + 1) * character->get_first_damage_init());
-		character->set_hp_init((pow(character->get_lv(), 1.35) + 1) * character->get_first_hp_init());
-		character->set_defence_init((pow(character->get_lv(), 0.6) + 1) * character->get_first_defence_init());
+		
 	}
 };
