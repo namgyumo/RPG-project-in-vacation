@@ -6,6 +6,7 @@
 #include<random>
 #include<ctime>
 #include<memory>
+#include<cmath>
 
 
 int random(int min, int max) {// make random 
@@ -15,6 +16,18 @@ int random(int min, int max) {// make random
 	std::uniform_int_distribution<> dist(min, max);
 	return dist(gen);
 }
+
+int map_block_count(int lv, int x_max, int y_max) {
+	int k = lv - 1; // x + y = k
+	int x_min = std::max(0, k - y_max);
+	int x_max_valid = std::min(x_max, k);
+
+	if (x_min > x_max_valid) {
+		return 0; // 해당 lv에 블록 없음
+	}
+	return x_max_valid - x_min + 1;
+}
+
 	
 class Living {
 protected:
@@ -69,17 +82,27 @@ class Character : public Living {
 private:
 	std::vector<std::shared_ptr<Skill>> skills;
 	CharacterType character_type{};
+	int exp{};
+	int next_exp{};
+	int first_damage_init, first_hp_init, first_defence_init;
 	
 public:
-	Character(std::string name, int age, int damage_init, int hp_init, int defence_init,int lv,bool live, CharacterType character_type,std::vector<std::shared_ptr<Skill>> skills) noexcept :
-		Living(std::move(name), age, damage_init, hp_init, defence_init, lv,live), character_type(character_type),skills(skills) {
+	Character(std::string name, int age, int damage_init, int hp_init, int defence_init,int lv,bool live, CharacterType character_type,std::vector<std::shared_ptr<Skill>> skills,int exp,int next_exp, int first_damage_init, int first_hp_init, int first_defence_init) noexcept :
+		Living(std::move(name), age, damage_init, hp_init, defence_init, lv,live), character_type(character_type),skills(skills),exp(exp),next_exp(next_exp), first_damage_init(first_damage_init), first_hp_init(first_hp_init), first_defence_init(first_defence_init) {
 	}
 
 	CharacterType get_character_type() const noexcept { return character_type; }
 	std::vector<std::shared_ptr<Skill>>& get_skill() noexcept { return skills; }
+	int get_exp() noexcept { return exp; }
+	int get_next_exp() noexcept { return next_exp; }
+	int get_first_damage_init() noexcept { return first_damage_init; }
+	int get_first_hp_init() noexcept { return first_hp_init; }
+	int get_first_defence_init() noexcept { return first_defence_init; }
 	void set_character_type(CharacterType new_character_type) noexcept { character_type = new_character_type; }
 	void set_skill(std::vector<std::shared_ptr<Skill>> new_skills) noexcept { skills = std::move(new_skills); }
-	void learn_skill(std::shared_ptr<Skill> skill) { skills.push_back(skill); }
+	void set_exp(int new_exp) noexcept { exp = new_exp; }
+	void set_next_exp(int new_next_exp) noexcept { next_exp = new_next_exp; }
+	void learn_skill(std::shared_ptr<Skill> skill) noexcept { skills.push_back(skill); }
 };
 
 enum class MonsterType {
@@ -92,12 +115,15 @@ enum class MonsterType {
 class Monster : public Living {
 private:
 	MonsterType monster_type{};
+	int exp_pd{};
 public:
-	Monster(std::string name, int age, int damage_init, int hp_init, int defence_init,int lv,bool live, MonsterType monster_type) noexcept:
-		Living(std::move(name), age, damage_init, hp_init, defence_init, lv,live), monster_type(monster_type) {
+	Monster(std::string name, int age, int damage_init, int hp_init, int defence_init, int lv, bool live, MonsterType monster_type, int exp_pd) noexcept :
+		Living(std::move(name), age, damage_init, hp_init, defence_init, lv,live), monster_type(monster_type),exp_pd(exp_pd) {
 	}
 	MonsterType get_monster_type() const noexcept { return monster_type; }
+	int get_exp_pd() { return exp_pd; }
 	void set_monster_type(MonsterType new_monster_type) noexcept { monster_type = new_monster_type; }
+	void set_exp_pd(int new_exp_pd) { exp_pd = new_exp_pd; }
 };
 
 class Character_Manager {
@@ -105,7 +131,7 @@ private:
 	std::vector<std::unique_ptr<Character>> characters;
 public:
 	Character* make_character(std::string name, int age, CharacterType character_type) {
-		int damage_init, hp_init, defence_init,lv = 1,live = true;
+		int damage_init, hp_init, defence_init,lv = 1,exp = 0,live = true;
 		switch (character_type) {
 		case CharacterType::Warrior: damage_init = 10; hp_init = 20; defence_init = 5; break;
 		case CharacterType::Wizard: damage_init = 15; hp_init = 15; defence_init = 15; break;
@@ -113,7 +139,7 @@ public:
 		case CharacterType::Archer: damage_init = 12; hp_init = 18; defence_init = 10; break;
 		}
 		characters.push_back(std::make_unique<Character>(
-			std::move(name), age, damage_init, hp_init, defence_init,lv,live,character_type));
+			std::move(name), age, damage_init, hp_init, defence_init,lv,live,character_type,exp, damage_init, hp_init, defence_init));
 		return characters.back().get();
 	}
 	const std::vector<std::unique_ptr<Character>>& all() const noexcept { return characters; }
@@ -129,9 +155,9 @@ public:
 class Monster_Manager {
 	std::vector<std::unique_ptr<Monster>> monsters;
 public:
-	Monster* make_monster(const std::string& name, int age,int damage_init,int hp_init,int defence_init,int lv,MonsterType monster_type) {
+	Monster* make_monster(const std::string& name, int age,int damage_init,int hp_init,int defence_init,int lv,MonsterType monster_type, int exp_pd) {
 		bool live = true;
-		monsters.push_back(std::make_unique<Monster>(std::move(name), age, damage_init, hp_init, defence_init, lv,live,monster_type));
+		monsters.push_back(std::make_unique<Monster>(std::move(name), age, damage_init, hp_init, defence_init, lv,live,monster_type,exp_pd));
 		return monsters.back().get();
 	}
 	std::vector<std::unique_ptr<Monster>>& all() { return monsters; }
@@ -153,7 +179,7 @@ public:
 		}
 	}
 
-	Monster* make_random_monster(int lv) {
+	Monster* make_random_monster(int lv,int x_max,int y_max) {
 
 		std::string name_data[21] = { "Angry", "Brutal", "Cunning", "Dark", "Elder",
 		"Fierce", "Giant", "Hungry", "Infernal", "Jeweled",
@@ -165,6 +191,7 @@ public:
 		else if (typenum > 61) { typenum = 2; }
 		else if (typenum > 91) { typenum = 3; }
 		else { typenum = 4; }
+		int exp_pd = pow(map_block_count(lv, x_max, y_max), 1.2) + 50*typenum;//몬스터가 제공하는 경험치 (해당 레벨의 블록수^1.2+50*타입넘버)
 		MonsterType monster_type = static_cast<MonsterType>(typenum);
 		int damage_init, hp_init, defence_init;
 		switch (monster_type) {
@@ -173,12 +200,12 @@ public:
 		case MonsterType::Animal: damage_init = 6; hp_init = 15; defence_init = 13; break;
 		case MonsterType::Dragon: damage_init = 20; hp_init = 25; defence_init = 3; break;
 		}
-		damage_init *= 1 + (lv * 0.5);
-		hp_init *= 1 + (lv * 0.5);
-		defence_init *= 1 + (lv * 0.5);
+		damage_init *= 1 + (pow(lv,1.5));
+		hp_init *= 1 + (pow(lv, 1.2));
+		defence_init *= 1 + (pow(lv, 0.5));
 		std::string name = name_data[random(0, 19)] +" "+ to_string(monster_type);
 		int age = random(1, 500);
-		Monster* monster = make_monster(name, age, damage_init, hp_init, defence_init, lv, monster_type);
+		Monster* monster = make_monster(name, age, damage_init, hp_init, defence_init, lv, monster_type,exp_pd);
 		return monster;
 	}
 	
@@ -217,7 +244,7 @@ public:
 		for (int y = 0; y < max_y; y++) {
 			for (int x = 0; x < max_x; x++) {
 				int monster_lv = x > y ? x : y;
-				Monster* monster = monster_manager.make_random_monster(monster_lv);
+				Monster* monster = monster_manager.make_random_monster(monster_lv,max_x,max_y);
 				grid[y][x] = map_creation(x, y,monster);
 			}
 		}
@@ -358,5 +385,26 @@ public:
 		};
 
 			
+	}
+};
+
+class Level_Manager {
+private:
+	int next_exp_init{50};
+public:
+	void add_exp(Character* character,int plus_exp) {
+		character->set_exp(character->get_exp() + plus_exp);
+	}
+	void next_exp_next(Character* character) {
+		character->set_next_exp(pow(character->get_lv(), 2) + next_exp_init);
+	}
+	void lvup(Character* character) {
+		while (character->get_exp() >= character->get_next_exp()) {
+			character->set_lv(character->get_lv() + 1);
+			next_exp_next(character);
+		}
+		character->set_damage_init((pow(character->get_lv(), 1.1) + 1) * character->get_first_damage_init());
+		character->set_hp_init((pow(character->get_lv(), 1.35) + 1) * character->get_first_hp_init());
+		character->set_defence_init((pow(character->get_lv(), 0.6) + 1) * character->get_first_defence_init());
 	}
 };
