@@ -85,10 +85,11 @@ private:
 	int exp{};
 	int next_exp{};
 	int first_damage_init, first_hp_init, first_defence_init;
+	int status_point{};
 	
 public:
-	Character(std::string name, int age, int damage_init, int hp_init, int defence_init,int lv,bool live, CharacterType character_type,std::vector<std::shared_ptr<Skill>> skills,int exp,int next_exp, int first_damage_init, int first_hp_init, int first_defence_init) noexcept :
-		Living(std::move(name), age, damage_init, hp_init, defence_init, lv,live), character_type(character_type),skills(skills),exp(exp),next_exp(next_exp), first_damage_init(first_damage_init), first_hp_init(first_hp_init), first_defence_init(first_defence_init) {
+	Character(std::string name, int age, int damage_init, int hp_init, int defence_init,int lv,bool live, CharacterType character_type,std::vector<std::shared_ptr<Skill>> skills,int exp,int next_exp, int first_damage_init, int first_hp_init, int first_defence_init,int status_point) noexcept :
+		Living(std::move(name), age, damage_init, hp_init, defence_init, lv,live), character_type(character_type),skills(skills),exp(exp),next_exp(next_exp), first_damage_init(first_damage_init), first_hp_init(first_hp_init), first_defence_init(first_defence_init),status_point(status_point) {
 	}
 
 	CharacterType get_character_type() const noexcept { return character_type; }
@@ -98,10 +99,12 @@ public:
 	int get_first_damage_init() noexcept { return first_damage_init; }
 	int get_first_hp_init() noexcept { return first_hp_init; }
 	int get_first_defence_init() noexcept { return first_defence_init; }
+	int get_status_point() { return status_point; }
 	void set_character_type(CharacterType new_character_type) noexcept { character_type = new_character_type; }
 	void set_skill(std::vector<std::shared_ptr<Skill>> new_skills) noexcept { skills = std::move(new_skills); }
 	void set_exp(int new_exp) noexcept { exp = new_exp; }
 	void set_next_exp(int new_next_exp) noexcept { next_exp = new_next_exp; }
+	void set_status_point(int new_status_point) { status_point = new_status_point; }
 	void learn_skill(std::shared_ptr<Skill> skill) noexcept { skills.push_back(skill); }
 };
 
@@ -142,7 +145,7 @@ public:
 			std::move(name), age, damage_init, hp_init, defence_init, lv, live,
 			character_type, std::vector<std::shared_ptr<Skill>>{},
 			exp, 51, // next_exp = lv©÷ + 50 = 51
-			damage_init, hp_init, defence_init));
+			damage_init, hp_init, defence_init,0));
 		return characters.back().get();
 	}
 	const std::vector<std::unique_ptr<Character>>& all() const noexcept { return characters; }
@@ -391,6 +394,15 @@ public:
 		};
 
 			
+	}
+};
+
+class Status {
+public:
+	void add_damage_point(Character* character) {
+		if (character->get_status_point()) {
+
+		}
 	}
 };
 
