@@ -35,12 +35,13 @@ protected:
 	int age{};
 	int damage_init{};
 	int hp_init{};
+	int hp{};
 	int defence_init{};
 	int lv{};
 	bool live{};
 public:
-	Living(std::string name, int age, int damage_init, int hp_init, int defence_init,int lv,bool live) noexcept :
-		name(std::move(name)),age(age), damage_init(damage_init), hp_init(hp_init), defence_init(defence_init),lv(lv),live(live) {}
+	Living(std::string name, int age, int damage_init, int hp_init,int hp, int defence_init,int lv,bool live) noexcept :
+		name(std::move(name)),age(age), damage_init(damage_init), hp_init(hp_init),hp(hp), defence_init(defence_init), lv(lv), live(live) { }
 
 	virtual ~Living() = default;
 
@@ -48,6 +49,7 @@ public:
 	int get_age() const noexcept { return age; }
 	int get_damage_init() const noexcept { return damage_init; }
 	int get_hp_init() const noexcept { return hp_init; }
+	int get_hp() const noexcept { return hp; }
 	int get_defence_init() const noexcept { return defence_init; }
 	int get_lv() const noexcept { return lv; }
 	bool get_live() const noexcept{ return live; }
@@ -56,6 +58,7 @@ public:
 	void set_age(int new_age) noexcept { age = new_age; }
 	void set_damage_init(int new_damage_init) noexcept { damage_init = new_damage_init; }
 	void set_hp_init(int new_hp_init) noexcept { hp_init = new_hp_init; }
+	void set_hp(int new_hp) noexcept { hp = new_hp; }
 	void set_defence_init(int new_defence_init) noexcept { defence_init = new_defence_init; }
 	void set_lv(int new_lv) noexcept { lv = new_lv; }
 	void set_live(bool new_live) { live = new_live; }
@@ -89,7 +92,7 @@ private:
 	
 public:
 	Character(std::string name, int age, int damage_init, int hp_init, int defence_init,int lv,bool live, CharacterType character_type,std::vector<std::shared_ptr<Skill>> skills,int exp,int next_exp, int first_damage_init, int first_hp_init, int first_defence_init,int status_point) noexcept :
-		Living(std::move(name), age, damage_init, hp_init, defence_init, lv,live), character_type(character_type),skills(skills),exp(exp),next_exp(next_exp), first_damage_init(first_damage_init), first_hp_init(first_hp_init), first_defence_init(first_defence_init),status_point(status_point) {
+		Living(std::move(name), age, damage_init, hp_init, hp_init, defence_init, lv,live), character_type(character_type),skills(skills),exp(exp),next_exp(next_exp), first_damage_init(first_damage_init), first_hp_init(first_hp_init), first_defence_init(first_defence_init),status_point(status_point) {
 	}
 
 	CharacterType get_character_type() const noexcept { return character_type; }
@@ -121,7 +124,7 @@ private:
 	int exp_pd{};
 public:
 	Monster(std::string name, int age, int damage_init, int hp_init, int defence_init, int lv, bool live, MonsterType monster_type, int exp_pd) noexcept :
-		Living(std::move(name), age, damage_init, hp_init, defence_init, lv,live), monster_type(monster_type),exp_pd(exp_pd) {
+		Living(std::move(name), age, damage_init, hp_init, hp_init, defence_init, lv,live), monster_type(monster_type),exp_pd(exp_pd) {
 	}
 	MonsterType get_monster_type() const noexcept { return monster_type; }
 	int get_exp_pd() { return exp_pd; }
@@ -209,9 +212,9 @@ public:
 		case MonsterType::Animal: damage_init = 6; hp_init = 15; defence_init = 13; break;
 		case MonsterType::Dragon: damage_init = 20; hp_init = 25; defence_init = 3; break;
 		}
-		damage_init *= 1 + (pow(lv,1.5));
-		hp_init *= 1 + (pow(lv, 1.2));
-		defence_init *= 1 + (pow(lv, 0.5));
+		damage_init *= 1 + (pow(lv,2.3));
+		hp_init *= 1 + (pow(lv, 2.13));
+		defence_init *= 1 + (pow(lv, 1.4));
 		std::string name = name_data[random(0, 19)] +" "+ to_string(monster_type);
 		int age = random(1, 500);
 		Monster* monster = make_monster(name, age, damage_init, hp_init, defence_init, lv, monster_type,exp_pd);
@@ -401,7 +404,20 @@ class Status {
 public:
 	void add_damage_point(Character* character) {
 		if (character->get_status_point()) {
-
+			character->set_damage_init((pow(character->get_lv(), 1.1) + 1) * character->get_first_damage_init() + character->get_damage_init());
+			character->set_status_point(character->get_status_point() - 1);
+		}
+	}
+	void add_hp_point(Character* character) {
+		if (character->get_status_point()) {
+			character->set_hp_init((pow(character->get_lv(), 1.2) + 1) * character->get_first_hp_init()*6 +character->get_hp_init());
+			character->set_status_point(character->get_status_point() - 1);
+		}
+	}
+	void add_defence_point(Character* character) {
+		if (character->get_status_point()) {
+			character->set_defence_init((pow(character->get_lv(), 0.6) + 1) * character->get_first_defence_init() + character->get_defence_init());
+			character->set_status_point(character->get_status_point() - 1);
 		}
 	}
 };
@@ -421,10 +437,70 @@ public:
 			character->set_lv(character->get_lv() + 1);
 			next_exp_next(character);
 
-			character->set_damage_init((pow(character->get_lv(), 1.1) + 1) * character->get_first_damage_init());
-			character->set_hp_init((pow(character->get_lv(), 1.35) + 1) * character->get_first_hp_init());
-			character->set_defence_init((pow(character->get_lv(), 0.6) + 1) * character->get_first_defence_init());
+			character->set_damage_init((pow(character->get_lv(), 1.1) + 1) * character->get_first_damage_init()+character->get_damage_init());
+			character->set_hp_init((pow(character->get_lv(), 1.2) + 1) * character->get_first_hp_init() * 6 + character->get_hp_init());
+			character->set_defence_init((pow(character->get_lv(), 0.6) + 1) * character->get_first_defence_init()+character->get_defence_init());
+
+			if (character->get_lv() % 10 == 0) {
+				character->set_status_point(character->get_status_point() + 1);
+			}
 		}
 		
+	}
+};
+
+class Battle {
+public:
+	void battle_line(Character* character, Map::Map_node* map, bool char_first) {
+		Monster* monster = map->monster;
+		if (!monster || !monster->get_live()) {
+			std::cout << "이 칸에는 몬스터가 없습니다.\n";
+			return;
+		}
+
+		int char_def_p = ((character->get_defence_init() / (character->get_defence_init() + 43333.0) * 65 + 5)
+			+ (65 * (1 + pow(-2.71828182846, (-character->get_defence_init() / 93800.0))) + 5)) * 5000;
+
+		int mon_def_p = ((monster->get_defence_init() / (monster->get_defence_init() + 43333.0) * 50 + 5)
+			+ (50 * (1 + pow(-2.71828182846, (-monster->get_defence_init() / 93800.0))) + 5)) * 5000;
+
+		bool turn = char_first;
+
+		while (character->get_live() && monster->get_live()) {
+			if (turn) {
+				if (random(0, 10000) > mon_def_p) {
+					monster->set_hp(monster->get_hp() - character->get_damage_init());
+				}
+				if (monster->get_hp() <= 0) {
+					monster->set_live(false);
+					monster->set_hp(0);
+					std::cout << monster->get_name() << " 격파!\n";
+					// 경험치 지급
+					Level_Manager lm;
+					lm.add_exp(character, monster->get_exp_pd());
+					lm.lvup(character);
+					std::cout << "경험치 " << monster->get_exp_pd() << " 획득!\n";
+					return;
+				}
+			}
+			else {
+				if (random(0, 10000) > char_def_p) {
+					character->set_hp(character->get_hp() - monster->get_damage_init());
+				}
+				if (character->get_hp() <= 0) {
+					character->set_live(false);
+					character->set_hp(0);
+					std::cout << character->get_name() << " 쓰러짐...\n";
+					return;
+				}
+			}
+			turn = !turn; // 턴 교대
+		}
+	}
+
+	void battle_start(Character* character, Map::Map_node* map) {
+		int who_first = random(0, 10);
+		if (who_first > 3) { battle_line(character, map, true); }
+		else { battle_line(character, map, false); }
 	}
 };
